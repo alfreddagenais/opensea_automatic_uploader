@@ -7,17 +7,17 @@ Telegram: https://t.me/maximedrn
 Copyright © 2022 Maxime Dréan. All rights reserved.
 Any distribution, modification or commercial use is strictly prohibited.
 
-Version 1.4.3 - 2022, 16 January.
+Version 1.4.8 - 2022, 28 January.
 
 Transfer as many non-fungible tokens as you want to
-the Opensea marketplace. Easy, efficient and fast,
+the OpenSea marketplace. Easy, efficient and fast,
 this tool lets you make your life as an Artist of
 the digital world much smoother.
 """
 
 
 # Colorama module: pip install colorama
-from colorama import init, Fore, Style  # Do not work on MacOS and Linux.
+from colorama import init, Fore, Style
 
 # Selenium module imports: pip install selenium
 from selenium import webdriver
@@ -29,19 +29,18 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 
 # Python default imports.
+from datetime import datetime as dt
 from glob import glob
 import os
 
 
 """Colorama module constants."""
-if os.name == 'nt':
-    init(convert=True)  # Init the Colorama module.
-    red = Fore.RED  # Red color.
-    green = Fore.GREEN  # Green color.
-    yellow = Fore.YELLOW  # Yellow color.
-    reset = Style.RESET_ALL  # Reset color attribute.
-else:  # For MacOS and Linux users.
-    red, green, yellow, reset = '', '', '', ''
+# This module may not work under MacOS.
+init(convert=True, autoreset=True)  # Init the Colorama module.
+red = Fore.RED  # Red color.
+green = Fore.GREEN  # Green color.
+yellow = Fore.YELLOW  # Yellow color.
+reset = Style.RESET_ALL  # Reset color attribute.
 
 
 class Reader:
@@ -89,7 +88,7 @@ class Structure:
         """Make a copy of the readed file and its extension."""
         self.file = reader.file.copy()  # File data copy.
         self.extension = reader.extension  # File extension copy.
-        self.action: list = action  # 1, 2 or 1 and 2.
+        self.action = action  # 1, 2 or 1 and 2.
         if 1 in self.action and 2 not in self.action:
             from uuid import uuid4  # A Python default import.
             self.save_file = f'data/{str(uuid4())[:8]}.csv'
@@ -197,7 +196,7 @@ class Structure:
         with open(self.save_file, 'a+', encoding='utf-8') as file:
             file.write(f'\n{url};; {self.supply};; {self.blockchain};;'
                        ' ;; ;; ;; ;; ;;')  # Complete data manually.
-        print(f'{green}Data saved in {self.save_file}{reset}')
+        print(f'{green}Data saved in {self.save_file}')
 
 
 class Webdriver:
@@ -217,6 +216,9 @@ class Webdriver:
         options.add_extension(self.metamask_extension_path)  # Add extension.
         options.add_argument("log-level=3")  # No logs is printed.
         options.add_argument("--mute-audio")  # Audio is muted.
+        options.add_argument("--lang=en-US")  # Set webdriver language
+        options.add_experimental_option(  # to English. - 2 methods.
+            'prefs', {'intl.accept_languages': 'en,en_US'})
         driver = webdriver.Chrome(service=Service(  # DeprecationWarning using
             self.webdriver_path), options=options)  # executable_path.
         driver.maximize_window()  # Maximize window to reach all elements.
@@ -246,13 +248,18 @@ class Webdriver:
 
     def send_date(self, element: str, keys: str) -> None:
         """Send a date (DD-MM-YYYY HH:MM) to a date input by clicking on it."""
-        self.clickable(element)  # Click first on the element.
-        self.send_keys(element, keys)  # Then send it the date.
+        keys = keys.split('-') if '-' in keys else [keys]
+        keys = [keys[1], keys[0], keys[2]] if len(keys) > 1 else keys
+        for part in range(len(keys) - 1 if keys[len(keys) - 1]  # Compare years
+                == str(dt.now().year) else len(keys)):  # To count clicks.
+            self.clickable(element)  # Click first on the element.
+            self.send_keys(element, keys[part])  # Then send it the date.
 
     def clear_text(self, element) -> None:
         """Clear text from an input."""
         self.clickable(element)  # Click on the element then clear its text.
-        control = Keys.CONTROL if os.name == 'nt' else Keys.COMMAND
+        # Note: change with 'darwin' if it's not working on MacOS.
+        control = Keys.COMMAND if os.name == 'posix' else Keys.CONTROL
         webdriver.ActionChains(self.driver).key_down(control).perform()
         webdriver.ActionChains(self.driver).send_keys('a').perform()
         webdriver.ActionChains(self.driver).key_up(control).perform()
@@ -265,15 +272,15 @@ class Webdriver:
         self.driver.switch_to.window(self.driver.window_handles[window_number])
 
 
-class Opensea:
-    """Main class: Opensea automatic uploader."""
+class OpenSea:
+    """Main class: OpenSea automatic uploader."""
 
     def __init__(self, password: str, recovery_phrase: str) -> None:
         """Get the password and the recovery_phrase from the text file."""
         self.recovery_phrase = recovery_phrase  # Get the MetaMask phrase.
         self.password = password  # Get the new/same password.
         self.login_url = 'https://opensea.io/login?referrer=%2Fasset%2Fcreate'
-        self.create_url = 'https://opensea.io/asset/create'  # Opensea URLs.
+        self.create_url = 'https://opensea.io/asset/create'  # OpenSea URLs.
 
     def metamask_login(self) -> None:
         """Login to the MetaMask extension."""
@@ -299,27 +306,27 @@ class Opensea:
             # Wait until the login worked and click on the "All done" button".
             web.visible('//*[contains(@class, "emoji")][position()=1]')
             web.clickable('//*[contains(@class, "btn-primary")][position()=1]')
-            print(f'{green}Logged to Metamask.{reset}')
+            print(f'{green}Logged to MetaMask.')
         except Exception:  # Failed - a web element is not accessible.
-            print(f'\n{red}Login to MetaMask failed, retrying...{reset}')
+            print(f'{red}Login to MetaMask failed, retrying...')
             self.metamask_login()
 
     def metamask_contract(self) -> None:
-        """Sign a MetaMask contract to login to Opensea."""
+        """Sign a MetaMask contract to login to OpenSea."""
         # Click on the "Sign" button - Make a contract link.
         web.clickable('//*[contains(@class, "button btn-secondary")]')
         try:  # Wait until the MetaMask pop up is closed.
             WDW(web.driver, 10).until(EC.number_of_windows_to_be(2))
         except TE:
             self.metamask_contract()  # Sign the contract a second time.
-        web.window_handles(1)  # Switch back to the Opensea tab.
+        web.window_handles(1)  # Switch back to the OpenSea tab.
 
     def opensea_login(self) -> None:
-        """Login to Opensea using MetaMask."""
-        try:  # Try to login to the Opensea using MetaMask.
-            print('Login to Opensea.', end=' ')
+        """Login to OpenSea using MetaMask."""
+        try:  # Try to login to the OpenSea using MetaMask.
+            print('Login to OpenSea.', end=' ')
             web.window_handles(1)  # Switch to the main (data:,) tab.
-            web.driver.get(self.login_url)  # Go to the Opensea login URL.
+            web.driver.get(self.login_url)  # Go to the OpenSea login URL.
             # Click on the "Show more options" button.
             web.clickable('//button[contains(@class, "show-more")]')
             # Click on the "MetaMask" button in list of wallets.
@@ -333,27 +340,24 @@ class Opensea:
             self.metamask_contract()  # Sign the contract.
             # Check if the login worked.
             WDW(web.driver, 15).until(EC.url_to_be(self.create_url))
-            print(f'{green}Logged to Opensea.{reset}\n')
+            print(f'{green}Logged to OpenSea.\n')
         except Exception:  # The contract failed.
-            print(f'{red}Login to Opensea failed. Retrying.{reset}')
             try:
-                print('Login to Opensea.', end=' ')
-                web.window_handles(1)  # Switch back to the Opensea tab.
-                web.driver.refresh()  # Reload the page (is the login failed?).
+                web.window_handles(1)  # Switch back to the OpenSea tab.
                 web.window_handles(2)  # Switch to the MetaMask pop up tab.
-                web.clickable('//*[contains(@class, "button btn-primary")]')
                 self.metamask_contract()  # Sign the contract.
                 # Check if the login worked.
                 WDW(web.driver, 15).until(EC.url_to_be(self.create_url))
-                print(f'{green}Logged to Opensea.{reset}\n')
+                print(f'{green}Logged to OpenSea.\n')
             except Exception:
+                print(f'{red}Login to OpenSea failed. Retrying.')
+                web.driver.refresh()  # Reload the page (is the login failed?).
                 self.opensea_login()  # Retry everything.
-            
 
     def opensea_upload(self, number: int) -> bool:
-        """Upload multiple NFTs automatically on Opensea."""
+        """Upload multiple NFTs automatically on OpenSea."""
         print(f'Uploading NFT n°{number}/{reader.lenght_file}.', end=' ')
-        try:  # Go to the Opensea create URL and input all datas of the NFT.
+        try:  # Go to the OpenSea create URL and input all datas of the NFT.
             web.driver.get(self.create_url + '?enable_supply=true')
             if isinstance(structure.file_path, list):
                 if len(structure.file_path) == 2:
@@ -368,7 +372,7 @@ class Opensea:
             if os.path.splitext(file_path)[1][1:].lower() not in \
                 ('jpg', 'jpeg', 'png', 'gif', 'svg', 'mp4',  # Check the file
                  'webm', 'mp3', 'wav', 'ogg', 'glb', 'gltf'):  # extensions.
-                raise TE('The file extension is not supported on Opensea.')
+                raise TE('The file extension is not supported on OpenSea.')
             structure.is_empty('//*[@id="media"]', file_path)
             if os.path.splitext(file_path)[1][1:].lower() in \
                     ('mp4', 'webm', 'mp3', 'wav', 'ogg', 'glb', 'gltf'):
@@ -463,8 +467,8 @@ class Opensea:
             if 2 not in structure.action:  # Save the data for future upload.
                 structure.save_nft(web.driver.current_url)
             return True  # If it perfectly worked.
-        except Exception:  # An element is not reachable.
-            print(f'{red}An error occured.{reset}')
+        except Exception as error:  # An element is not reachable.
+            print(f'{red}An error occured. {error}')
             return False  # If it failed.
 
     def opensea_sale(self, number: int, date: str = '%d-%m-%Y %H:%M') -> None:
@@ -595,14 +599,14 @@ class Opensea:
             except Exception:  # No deposit or an unknown error occured.
                 raise TE('You need to make a deposit before proceeding'
                          ' to listing of your NFTs.')
-            web.window_handles(1)  # Switch back to the Opensea tab.
+            web.window_handles(1)  # Switch back to the OpenSea tab.
             try:  # Wait until the NFT is listed.
                 web.visible('//header/h4')  # "Your NFT is listed!".
-                print(f'{green}NFT put up for sale.{reset}')
+                print(f'{green}NFT put up for sale.')
             except Exception:  # An error occured while listing the NFT.
                 raise TE('The NFT is not listed.')
-        except Exception:  # Failed, an error has occured.
-            print(f'{red}NFT sale cancelled.{reset}')
+        except Exception as error:  # Failed, an error has occured.
+            print(f'{red}NFT sale cancelled. {error}')
 
 
 def read_file(file_: str, question: str) -> str:
@@ -615,27 +619,26 @@ def read_file(file_: str, question: str) -> str:
             text = input(question)  # Ask the question.
             if input(f'Do you want to save your {file_} in '
                      'a text file? (y/n) ').lower() != 'y':
-                print(f'{yellow}Not saved.{reset}')
+                print(f'{yellow}Not saved.')
             else:
                 file.write(text)  # Write the text in file.
-                print(f'{green}Saved.{reset}')
+                print(f'{green}Saved.')
         return text
 
 
 def perform_action() -> list:
     """Suggest multiple actions to the user."""
-    text_list = [f'{yellow}\nChoose an action to perform:{reset}',
-                 '1 - Upload and sell NFTs (18 details/NFT).',
-                 '2 - Upload NFTs (12 details/NFT).', '3 - Sell '
-                 'NFTs (9 details/NFT including 3 autogenerated).']
-    action = [[1, 2], [1], [2]]
     while True:
-        [print(string) for string in text_list]
+        [print(string) for string in [
+            f'{yellow}\nChoose an action to perform:{reset}',
+            '1 - Upload and sell NFTs (18 details/NFT).',
+            '2 - Upload NFTs (12 details/NFT).', '3 - Sell '
+            'NFTs (9 details/NFT including 3 autogenerated).']]
         number = input('Action number: ')
         if number.isdigit():  # Check if answer is a number.
             if int(number) > 0:
-                return action[int(number) - 1]
-        print(f'{red}Answer must be a strictly positive integer.{reset}')
+                return [[1, 2], [1], [2]][int(number) - 1]
+        print(f'{red}Answer must be a strictly positive integer.')
 
 
 def data_file() -> str:
@@ -652,16 +655,16 @@ def data_file() -> str:
         answer = input('File number: ')
         cls()  # Clear console.
         if not answer.isdigit():  # Check if answer is a number.
-            print(f'{red}Answer must be an integer.{reset}')
+            print(f'{red}Answer must be an integer.')
         elif int(answer) == 0:  # Browse a file on PC.
-            print(f'{yellow}Browsing on your computer...{reset}')
+            print(f'{yellow}Browsing on your computer...')
             from tkinter import Tk  # Tkinter module: pip install tk
             from tkinter.filedialog import askopenfilename
             Tk().withdraw()  # Hide Tkinter tab.
             return askopenfilename(filetypes=[('', '.json .csv .xlsx')])
         elif int(answer) <= len(files_list):
             return files_list[int(answer) - 1]  # Return path of file.
-        print(f'{red}File doesn\'t exist.{reset}')
+        print(f'{red}File doesn\'t exist.')
 
 
 def cls() -> None:
@@ -673,7 +676,7 @@ def cls() -> None:
 def exit(message: str = '') -> None:
     """Stop running the program using the sys module."""
     import sys
-    sys.exit(f'\n{red}{message}{reset}')
+    sys.exit(f'\n{red}{message}')
 
 
 if __name__ == '__main__':
@@ -685,8 +688,8 @@ if __name__ == '__main__':
           '\nTelegram: https://t.me/maximedrn'
           '\n\nCopyright © 2022 Maxime Dréan. All rights reserved.'
           '\nAny distribution, modification or commercial use is strictly'
-          'prohibited.'
-          f'\n\nVersion 1.4.3 - 2022, 16 January.\n{reset}'
+          ' prohibited.'
+          f'\n\nVersion 1.4.8 - 2022, 28 January.\n{reset}'
           '\nIf you face any problem, please open an issue.')
 
     input('\nPRESS [ENTER] TO CONTINUE. ')
@@ -694,20 +697,20 @@ if __name__ == '__main__':
 
     print(f'{green}Created by Maxime Dréan.'
           '\n\nCopyright © 2022 Maxime Dréan. All rights reserved.'
-          '\nAny distribution, modification or commercial use is strictly\n'
-          f'prohibited.{reset}')
+          '\nAny distribution, modification or commercial use is strictly'
+          f' prohibited.')
 
-    # Init the Opensea class and send the password and the recovery phrase.
-    opensea = Opensea(
+    # Init the OpenSea class and send the password and the recovery phrase.
+    opensea = OpenSea(
         read_file('password', '\nWhat is your MetaMask password? '), read_file(
             'recovery_phrase', '\nWhat is your MetaMask recovery phrase? '))
 
     action = perform_action()  # What the user wants to do.
     reader = Reader(data_file())  # Ask for a file and read it.
-    structure = Structure(action)  # Init the Structure class to order data.
+    structure = Structure(action) 
     web = Webdriver()  # Start a new webdriver and init its methods.
     opensea.metamask_login()  # Connect to MetaMask.
-    opensea.opensea_login()  # Connect to Opensea.
+    opensea.opensea_login()  # Connect to OpenSea.
 
     for nft_number in range(reader.lenght_file):
         structure.get_data(nft_number)  # Structure the data of the NFT.
@@ -723,4 +726,4 @@ if __name__ == '__main__':
                     opensea.opensea_sale(nft_number + 1)  # Sell NFT.
 
     web.driver.quit()  # Stop the webdriver.
-    print(f'\n{green}All done! Your NFTs have been uploaded/sold.{reset}')
+    print(f'\n{green}All done! Your NFTs have been uploaded/sold.')
