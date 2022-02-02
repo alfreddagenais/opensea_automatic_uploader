@@ -26,9 +26,8 @@ async function main() {
   })
 
   for (const file of files) {
-    const fileName = path.parse(file).name
-
-    if (fileName === 1 || fileName === '1') {
+    const fileName = parseInt(path.parse(file).name);
+    if (fileName <= 1000) {
       continue;
     }
 
@@ -49,7 +48,20 @@ async function main() {
       ],
       "explicit_and_sensitive_content": false,
       "supply": 1,
-      "blockchain": "Ethereum"
+      "blockchain": "Ethereum",
+      "sale_type": "Fixed Price",
+      "price": 0.02,
+      "specific_buyer": [
+        false
+      ],
+      "method": [
+        "Sell to highest bidder",
+        1
+      ],
+      "duration": [
+        "01-02-2022 00:00", "28-02-2022 23:59"
+      ],
+      "quantity": 1,
     };
 
     const metaDataAttributes = [];

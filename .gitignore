@@ -132,3 +132,5 @@ dmypy.json
 assets/recovery_phrase.txt
 assets/chromedriver
 assets/password.txt
+
+/node_modules
