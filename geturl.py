@@ -151,7 +151,7 @@ if __name__ == '__main__':
 
     #//*[@id="main"]/div/div/div[3]/div/div[2]/div/div[3]/div/div/div[2]/div[15]/button/div/div[2]/div/div/div/div[2]/span[2]/a
     
-    SCROLL_PAUSE_TIME = 2.6
+    SCROLL_PAUSE_TIME = 4.6
     #time.sleep(1)
     #for index in range(1):
 
